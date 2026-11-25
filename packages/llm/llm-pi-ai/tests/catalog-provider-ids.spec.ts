@@ -20,13 +20,15 @@ import { catalogModels, catalogProvider, catalogProviderIds } from '../src/catal
 
 describe('catalog provider ids', () => {
   it('drops a provider that lists only non-chat models and keeps one that lists none', () => {
-    expect(catalogProviderIds()).toEqual(['chat-provider', 'uncataloged-provider'])
+    // Shipped entries follow the installed catalog's own providers.
+    expect(catalogProviderIds()).toEqual(['chat-provider', 'uncataloged-provider', 'cloudru'])
   })
 
   it('answers no catalog provider or models for the provider it drops', () => {
     expect(catalogProvider('classifier-provider')).toBeUndefined()
     expect(catalogModels('classifier-provider').size).toBe(0)
     expect(catalogProvider('uncataloged-provider')).toEqual({ id: 'uncataloged-provider' })
+    expect(catalogModels('cloudru').size).toBeGreaterThan(0)
     expect([...catalogModels('chat-provider').keys()]).toEqual(['chat-model'])
   })
 })

@@ -23,6 +23,9 @@
 /deepseek-ai-dsh-llm-pi-ai/use-this-package/configure-provider-routes:
   en: 5f2e3298066947a2
   zh: 0166148523454073
+/deepseek-ai-dsh-llm-pi-ai/use-this-package/shipped-providers:
+  en: 5c101f0921f0d651
+  zh: f4f18589eaaaf124
 /deepseek-ai-dsh-llm-pi-ai/use-this-package/sign-in-to-a-provider:
   en: c36f66438638ae08
   zh: 066a2fc4cb97c86f
@@ -57,8 +60,8 @@
   en: 0c6df3e8b6a75372
   zh: 476666a6f209542c
 /deepseek-ai-dsh-llm-pi-ai/understand-the-implementation/generated-provider-metadata:
-  en: 477d277e9ac35c8f
-  zh: 96870ca333fb6510
+  en: bdd20c301ff64d72
+  zh: 65c9ea8d2c630217
 /deepseek-ai-dsh-llm-pi-ai/understand-the-implementation/replay-and-vocabulary:
   en: e68f92d78150d341
   zh: 45850c739a7329d3

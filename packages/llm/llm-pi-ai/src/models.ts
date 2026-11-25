@@ -1,56 +1,17 @@
-/** pi-ai model helpers assembled from public narrow entry points. */
+/**
+ * pi-ai model helpers assembled from public narrow entry points: the provider
+ * and collection constructors (re-exported from `pi-provider.ts`) and the
+ * model-metadata readers this adapter resolves its controls with.
+ *
+ * @module dsh-llm-pi-ai/models
+ */
 
-import { builtinModels } from '@earendil-works/pi-ai/providers/all'
-import type {
-  Api,
-  CreateModelsOptions,
-  Model,
-  ModelThinkingLevel,
-  MutableModels,
-  Provider,
-  ProviderAuth,
-  ProviderStreams,
-} from '@earendil-works/pi-ai'
+import type { Api, Model, ModelThinkingLevel } from '@earendil-works/pi-ai'
 import type { LlmResolvedModelInfo } from '@deepseek-ai/dsh-llm'
 import { THINKING_LEVELS } from './catalog.ts'
 
-/** Input accepted by the static, single-protocol providers this package builds. */
-interface StaticProviderOptions {
-  id: string
-  name: string
-  baseUrl?: string
-  auth: ProviderAuth
-  models: readonly Model<Api>[]
-  api: ProviderStreams
-}
-
-/**
- * Create an empty pi-ai collection without importing its aggregate entry point.
- * @param options - credential storage and ambient authentication integrations.
- * @returns a mutable collection with no registered providers.
- */
-export function createModels(options?: CreateModelsOptions): MutableModels {
-  const models = builtinModels(options)
-  models.clearProviders()
-  return models
-}
-
-/**
- * Create the static, single-protocol provider used by configured custom routes.
- * @param input - provider identity, models, authentication, and protocol implementation.
- * @returns a provider that delegates each operation to the supplied protocol.
- */
-export function createProvider(input: StaticProviderOptions): Provider {
-  return {
-    id: input.id,
-    name: input.name,
-    ...input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl },
-    auth: input.auth,
-    getModels: () => input.models,
-    stream: (model, context, options) => input.api.stream(model, context, options),
-    streamSimple: (model, context, options) => input.api.streamSimple(model, context, options),
-  }
-}
+export { createModels, createProvider } from './pi-provider.ts'
+export type { ProtocolTable, StaticProviderOptions } from './pi-provider.ts'
 
 /**
  * Resolve selectable reasoning levels from pi-ai's public model metadata.

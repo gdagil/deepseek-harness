@@ -102,6 +102,20 @@ pi exposes no separate soft-byte target: the shared encoder's `imageTargetBytes`
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-llm-pi-ai) is the exhaustive source for every accepted field and its JSDoc.
 
+### Shipped providers
+
+pi-ai supplies the catalog for the providers its own release ships. This package adds the ones a composition would otherwise restate: [`src/shipped-providers.ts`](src/shipped-providers.ts) declares each as a pi-ai provider, and the catalog lookups answer for them exactly as for an installed one, so a catalog route needs only a credential reference — its endpoint, wire protocols, and model list come from the shipped entry.
+
+Cloud.ru Foundation Models ships under the route key `cloudru` and authenticates with `CLOUDRU_API_KEY`. One route covers two protocols: a model goes to Anthropic Messages when the service serves it on `/v1/messages`, and to Chat Completions otherwise, because each shipped model carries its own `baseUrl`. A route-level `baseURL` replaces that endpoint for every model on the route and so breaks the other protocol; leave it unset.
+
+```yaml
+    providers:
+      cloudru:
+        apiKeyEnv: CLOUDRU_API_KEY
+```
+
+[`src/cloudru-models.generated.ts`](src/cloudru-models.generated.ts) comes from the service's public `GET /v1/models` listing, which needs no credential, so `pnpm run gen-cloudru-models` refreshes it. The listing discloses no output cap, which is why every shipped model asserts 32768 tokens — the same value an Anthropic Messages request must send as `max_tokens`. The listing names every model the service publishes, including the ones Cloud.ru proxies to an external vendor; whether an organization may call one of those is an account-level RBAC decision the listing does not report.
+
 ### Sign in to a provider
 
 A provider pi-ai ships a login for can be signed into through the harness authorization seam: the flow offers OAuth or an interactive key prompt (a key is typed into pi-ai's own login prompt, not into the settings form), and the resulting credential is stored in the harness credential store at `llm-pi-ai/<provider id>`. The stored sign-in authenticates its route beneath any `apiKeyEnv` override and refreshes itself under the store's cross-process lock; signing out deletes the stored record. A hand-declared route key outside the record grammar — a lowercase hyphenated identifier — cannot be signed into, because a record write for it refuses with `LlmError('UNSTORABLE_PROVIDER_ID')`; such a route authenticates through `apiKeyEnv` or ambient provider settings instead.
@@ -187,6 +201,8 @@ The plugin declares every installed catalog provider it can authenticate in the 
 [`scripts/gen-provider-data.ts`](scripts/gen-provider-data.ts) owns [`src/provider-data.generated.ts`](src/provider-data.generated.ts). It uses public resolvers with synthetic `AuthContext` answers to discover environment reads across empty, individual and suffix configurations. Resolver failures use `findEnvKeys` through the temporary compatibility entry. All current authentication variables come from resolvers; no authentication supplement is needed. The generator reports fallback use and fails if fallback metadata is missing. It does not read real credentials, start a login flow, or send a model request. Probing covers the installed resolvers; it does not prove all possible value-dependent branches.
 
 Endpoint data comes from the public provider/model catalog and uppercase URL placeholders. Azure, Vertex and Bedrock need small supplements for variables read outside the auth context. Runtime directory reads execute no probes. The dependency range remains unchanged. A provider added by a newer consumer installation has no generated authentication hints until regeneration. For an existing provider, changed environment names and endpoints also remain at the generated snapshot until regeneration. Environment hints check only the listed credential references; they do not inspect provider-managed files such as AWS profiles or Google application-default credentials.
+
+The shipped Cloud.ru catalog has its own generator: [`scripts/gen-cloudru-models.ts`](scripts/gen-cloudru-models.ts) reads the service's public listing over the network and writes [`src/cloudru-models.generated.ts`](src/cloudru-models.generated.ts). It reads no lockfile and no credential, so it is not part of the pre-commit check.
 
 After updating pi-ai or changing the generator, install the updated locked dependencies, then run these commands from the repository root:
 

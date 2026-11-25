@@ -102,6 +102,20 @@ pi 不暴露单独的软字节目标，共享编码器的 `imageTargetBytes` 等
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-llm-pi-ai)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
+### 内置提供方
+
+pi-ai 只为其自身版本发布的提供方提供目录。本包补充那些否则需要组合自行复述的提供方：[`src/shipped-providers.ts`](src/shipped-providers.ts) 把每个提供方声明为 pi-ai 提供方，目录查询对它们的回答与已安装提供方完全一致，因此目录路由只需一个凭据引用——端点、协议和模型列表都来自内置条目。
+
+Cloud.ru Foundation Models 以路由键 `cloudru` 内置，并用 `CLOUDRU_API_KEY` 认证。一个路由覆盖两种协议：服务在 `/v1/messages` 上提供该模型时走 Anthropic Messages，否则走 Chat Completions，因为每个内置模型自带 `baseUrl`。路由级 `baseURL` 会替换该路由上每个模型的端点，从而破坏另一种协议；请保持未设置。
+
+```yaml
+    providers:
+      cloudru:
+        apiKeyEnv: CLOUDRU_API_KEY
+```
+
+[`src/cloudru-models.generated.ts`](src/cloudru-models.generated.ts) 来自服务的公开 `GET /v1/models` 列表，无需凭据，因此可用 `pnpm run gen-cloudru-models` 刷新。列表不公布输出上限，所以每个内置模型都声明 32768 token——这也是 Anthropic Messages 请求必须作为 `max_tokens` 发送的值。列表列出服务发布的所有模型，包括 Cloud.ru 代理到外部厂商的模型；组织能否调用其中某个模型由账户级 RBAC 决定，列表本身不报告这一点。
+
 ### 登录提供方
 
 pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
@@ -187,6 +201,8 @@ Config 更新严格验证发生变化的 provider。初始加载将已存储的�
 [`scripts/gen-provider-data.ts`](scripts/gen-provider-data.ts) 负责生成 [`src/provider-data.generated.ts`](src/provider-data.generated.ts)。它通过公开 resolver 和模拟的 `AuthContext` 回答，探测空配置、单个变量及变量后缀组合下的环境读取。resolver 失败时使用临时兼容入口的 `findEnvKeys`。当前所有认证变量都来自 resolver，无需认证变量补充。生成器会报告回退；缺少回退数据时生成失败。它不读取真实凭据，不启动登录流程，也不发送模型请求。探测覆盖已安装的 resolver，不能证明所有依赖具体变量值的分支。
 
 端点数据来自公开的提供方及模型目录，以及 URL 中的大写变量占位符。Azure、Vertex 和 Bedrock 需补充认证上下文之外读取的变量。运行时读取目录不执行探测。依赖范围保持不变。用户安装的新版本新增提供方时，重新生成之前不显示其认证变量提示。已有提供方的环境变量名和端点发生变化时，也会继续使用生成快照，直到重新生成。环境提示只检查列出的凭据引用，不检查 AWS profile 或 Google 应用默认凭据等提供方管理的文件。
+
+内置的 Cloud.ru 目录有自己的生成器：[`scripts/gen-cloudru-models.ts`](scripts/gen-cloudru-models.ts) 通过网络读取服务的公开列表并写入 [`src/cloudru-models.generated.ts`](src/cloudru-models.generated.ts)。它不读取锁文件，也不读取凭据，因此不在 pre-commit 检查范围内。
 
 更新 pi-ai 或修改生成器后，先按更新的锁文件安装依赖，再从仓库根目录运行以下命令：
 

@@ -13,6 +13,7 @@
  */
 
 import { builtinProviders, getAllBuiltinModels, getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
+import { SHIPPED_PROVIDERS } from './shipped-providers.ts'
 import type { BuiltinProvider } from '@earendil-works/pi-ai/providers/all'
 import type {
   AnthropicMessagesCompat,
@@ -185,24 +186,30 @@ function servesChat(provider: Provider): boolean {
  * @returns the catalog provider index, in catalog order.
  */
 function catalogProviders(): Map<string, Provider> {
-  providerIndex ??= new Map(builtinProviders().filter(servesChat).map(provider => [provider.id, provider]))
+  providerIndex ??= new Map<string, Provider>([
+    ...builtinProviders().filter(servesChat).map(provider => [provider.id, provider] as const),
+    // Shipped entries are curated here, so they are chat routes by construction.
+    ...[...SHIPPED_PROVIDERS].map(([id, shipped]) => [id, shipped.provider] as const),
+  ])
   return providerIndex
 }
 
 /**
- * The installed catalog provider for one route, when pi-ai ships one this
- * adapter serves.
+ * The catalog provider for one route, when the installed catalog or a shipped
+ * entry supplies one this adapter serves.
  * @param provider - provider route key.
- * @returns the catalog provider, or `undefined` for a route pi-ai does not ship
- *   or ships without a chat model.
+ * @returns the catalog provider, or `undefined` for a route nothing describes
+ *   or one described without a chat model.
  */
 export function catalogProvider(provider: string): Provider | undefined {
   return catalogProviders().get(provider)
 }
 
 /**
- * Every provider route the installed pi-ai catalog ships and this adapter
- * serves: a provider whose catalog lists models but no chat model is left out.
+ * Every provider route the catalog offers this adapter: the installed pi-ai
+ * catalog's chat providers, then the shipped entries. A catalog provider that
+ * lists models but no chat model is left out; a shipped entry is a chat route
+ * by construction.
  * @returns the catalog provider ids, in catalog order.
  */
 export function catalogProviderIds(): readonly string[] {
@@ -210,11 +217,14 @@ export function catalogProviderIds(): readonly string[] {
 }
 
 /**
- * The installed catalog models for one route, indexed by model id.
+ * The catalog models for one route, indexed by model id: a shipped entry's
+ * declared models, otherwise the installed catalog's.
  * @param provider - provider route key.
  * @returns catalog models by id; empty for a route {@link catalogProvider} does not return.
  */
 export function catalogModels(provider: string): Map<string, Model<Api>> {
+  const shipped = SHIPPED_PROVIDERS.get(provider)
+  if (shipped !== undefined) return new Map(shipped.provider.getModels().map(model => [model.id, model]))
   if (!catalogProviders().has(provider)) return new Map()
   const models = getBuiltinModels(provider as BuiltinProvider) as Model<Api>[]
   return new Map(models.map(model => [model.id, model]))

@@ -19,8 +19,8 @@ import type { PiAiReplayResponse } from '../src/replay.ts'
 import { assemble, type AssembledResult } from './assemble.ts'
 
 interface ProviderCase {
-  provider: 'openai' | 'anthropic'
-  api: 'openai-responses' | 'anthropic-messages'
+  provider: string
+  api: string
   model: string
   apiKey?: string
   baseURL?: string
@@ -33,6 +33,9 @@ const azureOpenAIKey = process.env.AZURE_OPENAI_API_KEY
 // protocol, so falling back to DEEPSEEK_API_KEY turns the keyless skip into a 404.
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY
 const anthropicBaseURL = process.env.DSH_PI_AI_ANTHROPIC_BASE_URL
+// The shipped Cloud.ru route authenticates from the environment when the
+// profile names no credential, so an export is the whole opt-in.
+const cloudruApiKey = process.env.CLOUDRU_API_KEY
 
 const providerCases: ProviderCase[] = [
   {
@@ -50,6 +53,21 @@ const providerCases: ProviderCase[] = [
     model: process.env.DSH_PI_AI_ANTHROPIC_MODEL ?? 'claude-opus-4-8',
     ...anthropicApiKey === undefined ? {} : { apiKey: anthropicApiKey },
     ...anthropicBaseURL === undefined ? {} : { baseURL: anthropicBaseURL },
+  },
+  // Both protocols of the shipped Cloud.ru route, over the endpoints the
+  // catalog declares: an internal chat model, and the one model the service
+  // serves over Anthropic Messages.
+  {
+    provider: 'cloudru',
+    api: 'openai-completions',
+    model: process.env.DSH_PI_AI_CLOUDRU_MODEL ?? 'ai-sage/GigaChat3-10B-A1.8B',
+    ...cloudruApiKey === undefined ? {} : { apiKey: cloudruApiKey },
+  },
+  {
+    provider: 'cloudru',
+    api: 'anthropic-messages',
+    model: process.env.DSH_PI_AI_CLOUDRU_MESSAGES_MODEL ?? 'openai/gpt-oss-120b',
+    ...cloudruApiKey === undefined ? {} : { apiKey: cloudruApiKey },
   },
 ]
 
